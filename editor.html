@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editorial | Jízdní</title>
+    <link rel="icon" type="image/png" href="./src/favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #F4F4F0;
+            --text-color: #1A1A1A;
+            --accent-green: #2C4A3B;
+            --accent-cyan: #40C4C4;
+            --border-color: #D0D0D0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-color); color: var(--text-color); padding: 2rem 5%; max-width: 900px; margin: 0 auto; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
+        h1 { font-size: 1.5rem; font-weight: 600; }
+        a { color: var(--accent-cyan); text-decoration: none; font-size: 0.9rem; }
+        a:hover { text-decoration: underline; }
+
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; color: #555; }
+        input, textarea { width: 100%; padding: 0.8rem; border: 1px solid var(--border-color); background: #FFF; border-radius: 4px; font-family: inherit; font-size: 1rem; }
+        input:focus, textarea:focus { outline: none; border-color: var(--accent-cyan); }
+        textarea { min-height: 300px; resize: vertical; line-height: 1.6; }
+
+        .actions { display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; }
+        button { padding: 0.8rem 1.5rem; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .btn-save { background: var(--accent-cyan); color: white; }
+        .btn-export { background: #1A1A1A; color: white; }
+        .btn-clear { background: transparent; border: 1px solid var(--border-color); color: #555; }
+
+        .list { margin-top: 4rem; }
+        .list h2 { font-size: 1.2rem; margin-bottom: 1.5rem; }
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #FFF; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 0.8rem; }
+        .item-info h3 { font-size: 1rem; margin-bottom: 0.2rem; }
+        .item-info p { font-size: 0.85rem; color: #666; }
+        .item-actions button { padding: 0.4rem 0.8rem; font-size: 0.8rem; margin-left: 0.5rem; }
+        .btn-edit { background: #EEE; color: #1A1A1A; }
+        .btn-delete { background: #FFE5E5; color: #C00; }
+
+        .toast { position: fixed; bottom: 2rem; right: 2rem; background: #1A1A1A; color: white; padding: 1rem 1.5rem; border-radius: 4px; display: none; }
+        .toast.show { display: block; animation: fadeUp 0.3s ease; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Editorial Space</h1>
+        <a href="index.html">← View site</a>
+    </header>
+
+    <form id="form">
+        <input type="hidden" id="id">
+        <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="title" required placeholder="e.g., The hidden workshop of Berlin">
+        </div>
+        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+                <label>Date</label>
+                <input type="date" id="date" required>
+            </div>
+            <div>
+                <label>Location</label>
+                <input type="text" id="location" required placeholder="e.g., Berlin, Germany">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Content (separate paragraphs with a blank line)</label>
+            <textarea id="content" required placeholder="Write your article here..."></textarea>
+        </div>
+        <div class="actions">
+            <button type="submit" class="btn-save">Save locally</button>
+            <button type="button" class="btn-export" onclick="exportAll()">Export JSON files</button>
+            <button type="button" class="btn-clear" onclick="resetForm()">New</button>
+        </div>
+    </form>
+
+    <div class="list">
+        <h2>Articles in local memory</h2>
+        <div id="list"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        let articles = JSON.parse(localStorage.getItem('jizdni_articles') || '[]');
+        let editId = null;
+
+        function render() {
+            const list = document.getElementById('list');
+            if (articles.length === 0) {
+                list.innerHTML = '<p style="color:#888; font-style:italic;">No articles in memory.</p>';
+                return;
+            }
+            list.innerHTML = articles.sort((a,b) => new Date(b.date) - new Date(a.date)).map(a => `
+                <div class="item">
+                    <div class="item-info">
+                        <h3>${a.title}</h3>
+                        <p>${a.location} — ${a.date}</p>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn-edit" onclick="edit('${a.id}')">Edit</button>
+                        <button class="btn-delete" onclick="del('${a.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('form').addEventListener('submit', e => {
+            e.preventDefault();
+            const data = {
+                id: editId || Date.now().toString(),
+                title: document.getElementById('title').value,
+                date: document.getElementById('date').value,
+                location: document.getElementById('location').value,
+                content: document.getElementById('content').value
+            };
+
+            if (editId) {
+                articles = articles.map(a => a.id === editId ? data : a);
+                showToast('Article updated');
+            } else {
+                articles.push(data);
+                showToast('Article created');
+            }
+            
+            localStorage.setItem('jizdni_articles', JSON.stringify(articles));
+            resetForm();
+            render();
+        });
+
+        function edit(id) {
+            const a = articles.find(x => x.id === id);
+            if (!a) return;
+            editId = a.id;
+            document.getElementById('id').value = a.id;
+            document.getElementById('title').value = a.title;
+            document.getElementById('date').value = a.date;
+            document.getElementById('location').value = a.location;
+            document.getElementById('content').value = a.content;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function del(id) {
+            if (!confirm('Delete this article?')) return;
+            articles = articles.filter(a => a.id !== id);
+            localStorage.setItem('jizdni_articles', JSON.stringify(articles));
+            if (editId === id) resetForm();
+            render();
+            showToast('Article deleted');
+        }
+
+        function resetForm() {
+            document.getElementById('form').reset();
+            editId = null;
+            document.getElementById('date').valueAsDate = new Date();
+        }
+
+        function exportAll() {
+            if (articles.length === 0) return showToast('Nothing to export');
+            
+            const manifest = {
+                articles: articles.map(a => ({ id: a.id, title: a.title, date: a.date, location: a.location, filename: `article-${a.id}.json` })),
+                lastUpdated: new Date().toISOString()
+            };
+            download(JSON.stringify(manifest, null, 2), 'manifest.json');
+
+            articles.forEach(a => {
+                download(JSON.stringify({
+                    id: a.id, title: a.title, date: a.date, location: a.location, content: a.content
+                }, null, 2), `article-${a.id}.json`);
+            });
+
+            showToast(`${articles.length + 1} files downloaded. Place them in /publish/`);
+        }
+
+        function download(content, filename) {
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        document.getElementById('date').valueAsDate = new Date();
+        render();
+    </script>
+</body>
+</html>

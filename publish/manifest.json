@@ -1,0 +1,19 @@
+{
+  "articles": [
+    {
+      "id": "2",
+      "title": "Copenhague : la mécanique du quotidien",
+      "date": "2026-09-20",
+      "location": "Copenhague, Danemark",
+      "filename": "article-2.json"
+    },
+    {
+      "id": "1",
+      "title": "L'atelier caché de Berlin",
+      "date": "2026-09-15",
+      "location": "Berlin, Allemagne",
+      "filename": "article-1.json"
+    }
+  ],
+  "lastUpdated": "2026-10-01T06:30:52.933605"
+}
