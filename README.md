@@ -20,6 +20,6 @@ Todo : Insert picture inside articles, making this with editor.html
     └── article-*.json    # Individual article files (one per article)
 
 ## Preview
-![main](/preview/main_prev.jpg)
+![main](preview/main_prev.jpg)
 
-![editor](/preview/editor_prev.jpg)
+![editor](preview/editor_prev.jpg)
